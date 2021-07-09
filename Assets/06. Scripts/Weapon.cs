@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class Weapon : MonoBehaviour
 {
+    // 총 세팅 값
     [Header("Weapon Specification")]
     public string weaponName;                                   // 무기 이름
     public int bulletsPerMag;                                   // 한 탄창의 탄환 수
@@ -23,43 +24,64 @@ public class Weapon : MonoBehaviour
     private float fireTimer;                                    // 파라미터. 총 쏘는 시간
     private bool isReloading;                                   // 재장전 시간
     private bool isAiming;                                      // 조준하고 있는지 아닌지를 판별
+    private bool isRunning;                                     // 캐릭터 Running
 
     // 레퍼런스 선언
+    [Header("Reference")]
     public Transform shootPoint;                                // 격발 위치
     public Transform bulletCasingPoint;                         // 총알 나오는 위치 변수
     private Animator anim;                                      // 애니메이터 설정
     public ParticleSystem muzzleFlash;                          // 격발위치 플래시 설정
     public Text bulletsText;                                    // 총알 텍스트 담는 변수
-
+    private CharacterController characterController;            // 캐릭터 컨트롤러 변수 추가
+    
     // 프리팹 담는 변수
+    [Header("Prefab")]
     public GameObject hitSparkPrefab;                           // 히트 파티클 넣는 프리팹 변수
     public GameObject hitHolePrefab;                            // 히트홀 넣는 프리팹 변수
     public GameObject bulletCasing;
 
-
     // 사운드 담는 변수
+    [Header("Sound")]
     public AudioSource audioSource;                             // 사운드 설정
     public AudioClip shootSound;                                // 격발 소리 설정
-    public AudioClip reloadSound;                                // 재장전 소리
+    public AudioClip reloadSound;                               // 재장전 소리
+    public AudioClip drawSound;                                 // 무기 교체 사운드
 
     // 반동 주는 변수
+    [Header("Recoil")]
     public Transform camRecoil;                                 // 카메라와 무기에 반동
     public Vector3 recoilKickback;                              // 원위치
     public float recoilAmount;                                  // 반동의 세기
     public float originalRecoil;                                // 원래 반동
-    
+
+    // Awake -> OnEnable -> Start 순
+    void Awake()
+    {
+        anim = GetComponent<Animator>();
+    }
+
+    // 해당 게임 오브젝트가 활성화 되었을 때 자동으로 호출. start 이전
+     void OnEnable()
+    {
+        anim.CrossFadeInFixedTime("Draw", 0.01f);
+        audioSource.clip = drawSound;
+        audioSource.Play();
+        bulletsText.text = currentBullets + " / " + bulletsTotal;
+    }
 
     void Start()
     {
         currentBullets = bulletsPerMag;
-        anim = GetComponent<Animator>();
+        //anim = GetComponent<Animator>();
         bulletsText.text = currentBullets + " / " + bulletsTotal;
 
         originalPosition = transform.localPosition;
         originalAccuracy = accuracy;
         originalRecoil = recoilAmount;
-    }
 
+        characterController = GetComponent<CharacterController>();
+    }
     void Update()
     {
         // 현재 애니메이터가 0번 레이어의 어떤 스테이트에 있는지 정보를 가져오는 것.
@@ -100,15 +122,17 @@ public class Weapon : MonoBehaviour
         AimDownSights();
         // 카메라 원위치 선언
         RecoilBack();
+        // 달리기 선언
+        Run();
     }
 
     void Fire()
     {
-        if(fireTimer < fireRate || isReloading)
+        // ()안 이면 발사가 되지 않는다.
+        if(fireTimer < fireRate || isReloading || isRunning)
         {
             return;
         }
-        //Debug.Log("격발");
 
         // 레이 캐스트
         RaycastHit raycastHit;
@@ -246,5 +270,14 @@ public class Weapon : MonoBehaviour
 
         // 케이싱 파괴
         Destroy(casing, 1f);
+    }
+
+     void Run()
+    {
+        // 왼쪽 쉬프트를 누르면 bool 값 true
+        anim.SetBool("isRunning", Input.GetKey(KeyCode.LeftShift));
+        isRunning = characterController.velocity.sqrMagnitude > 99 ? true : false;
+        // Float형 파라미터인 Speed를 해당 캐릭터 컨트롤러의 속도로 지정
+        anim.SetFloat("Speed", characterController.velocity.sqrMagnitude);
     }
 }
