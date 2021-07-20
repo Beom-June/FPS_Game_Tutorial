@@ -5,9 +5,17 @@ using UnityEngine.UI;
 
 public class Weapon : MonoBehaviour
 {
+    // 무기 열거형 선언
+    public enum WeaponType
+    {
+        Rifle,
+        Pisptol
+    }
+
     // 총 세팅 값
     [Header("Weapon Specification")]
     public string weaponName;                                   // 무기 이름
+    public WeaponType weaponType;                               // 무기 종류 설정
     public int bulletsPerMag;                                   // 한 탄창의 탄환 수
     public int bulletsTotal;                                    // 최대 총알 갯수
     public int currentBullets;                                  // 현재 총알
@@ -32,9 +40,13 @@ public class Weapon : MonoBehaviour
     public Transform bulletCasingPoint;                         // 총알 나오는 위치 변수
     private Animator anim;                                      // 애니메이터 설정
     public ParticleSystem muzzleFlash;                          // 격발위치 플래시 설정
-    public Text bulletsText;                                    // 총알 텍스트 담는 변수
     private CharacterController characterController;            // 캐릭터 컨트롤러 변수 추가
-    
+
+    //Bullets Bar 설정
+   [Header("Bullets UI")]
+    public Text bulletsText;                                    // 총알 텍스트 담는 변수
+    //public RectTransform bulletsBar;                            // BulletsBar 담는 변수
+
     // 프리팹 담는 변수
     [Header("Prefab")]
     public GameObject hitSparkPrefab;                           // 히트 파티클 넣는 프리팹 변수
@@ -62,7 +74,7 @@ public class Weapon : MonoBehaviour
     }
 
     // 해당 게임 오브젝트가 활성화 되었을 때 자동으로 호출. start 이전
-     void OnEnable()
+    void OnEnable()
     {
         anim.CrossFadeInFixedTime("Draw", 0.01f);
         audioSource.clip = drawSound;
@@ -72,31 +84,34 @@ public class Weapon : MonoBehaviour
 
     void Start()
     {
-        currentBullets = bulletsPerMag;
-        //anim = GetComponent<Animator>();
-        bulletsText.text = currentBullets + " / " + bulletsTotal;
+        characterController = GetComponentInParent<CharacterController>();
 
+        // Bullet 설정
+        currentBullets = bulletsPerMag;
+        bulletsText.text = currentBullets + " / " + bulletsTotal;
+        //bulletsBar.localScale = Vector3.one;
+
+        // 반동 설정
         originalPosition = transform.localPosition;
         originalAccuracy = accuracy;
         originalRecoil = recoilAmount;
-
-        characterController = GetComponent<CharacterController>();
     }
     void Update()
     {
         // 현재 애니메이터가 0번 레이어의 어떤 스테이트에 있는지 정보를 가져오는 것.
         AnimatorStateInfo info = anim.GetCurrentAnimatorStateInfo(0);
-
         isReloading = info.IsName("Reload");
 
+        // 라이플이면 GetButton, 아니면 GetButtonDown으로 설정
+        bool fire = weaponType == WeaponType.Rifle ? Input.GetButton("Fire1") : Input.GetButtonDown("Fire1");
         // 좌측 마우스 누르면 격발
-        if(Input.GetButton("Fire1"))
+        if (fire)
         {
-            if(currentBullets > 0)
+            if (currentBullets > 0)
             {
-                 Fire();
+                Fire();
             }
-            else            
+            else
             {
                 // 총알이 0 미만이면 재장전
                 DoReload();
@@ -104,16 +119,16 @@ public class Weapon : MonoBehaviour
         }
 
         // R 키 누르면 재장전
-        if(Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.R))
         {
             // 정조준 중이면 재장전 불가능
-            if(!isAiming)
+            if (!isAiming)
             {
                 DoReload();
             }
         }
 
-        if(fireTimer < fireRate)
+        if (fireTimer < fireRate)
         {
             fireTimer += Time.deltaTime;
         }
@@ -125,11 +140,10 @@ public class Weapon : MonoBehaviour
         // 달리기 선언
         Run();
     }
-
     void Fire()
     {
         // ()안 이면 발사가 되지 않는다.
-        if(fireTimer < fireRate || isReloading || isRunning)
+        if (fireTimer < fireRate || isReloading || isRunning)
         {
             return;
         }
@@ -139,7 +153,7 @@ public class Weapon : MonoBehaviour
 
         // Random.onUnitSphere는 직경이 1인 구안에 있는 랜덤한 위치 반환. 
         // accuracy 값을 조절하면 원하는 산탄기능 얻을 수 있음. 낮을 수록 정확함.
-        if(Physics.Raycast (shootPoint.position, shootPoint.transform.forward + Random.onUnitSphere * accuracy, out raycastHit, range))
+        if (Physics.Raycast(shootPoint.position, shootPoint.transform.forward + Random.onUnitSphere * accuracy, out raycastHit, range))
         {
             //Debug.Log("맞음");
             // hitSpark 프리팹 생성. Quaternion.FromToRotation : 축을 방향으로 회전
@@ -153,19 +167,19 @@ public class Weapon : MonoBehaviour
             GameObject hitHole = Instantiate(hitHolePrefab, raycastHit.point, Quaternion.FromToRotation(Vector3.up, raycastHit.normal));
             // 피격된 물체가 부모 오브젝트가 되게 함
             hitHole.transform.SetParent(hitHole.transform);
-            // 4초 후에 hitHole 삭제
-            Destroy(hitHole, 4f);
+            // 0.5초 후에 hitHole 삭제
+            Destroy(hitHole, 0.5f);
 
             // 적에게 데미지를 줌
             HealthManager healthManager = raycastHit.transform.GetComponent<HealthManager>();
-            if(healthManager)
+            if (healthManager)
             {
                 healthManager.ApplyDamage(damage);
             }
 
             // 피격되는 물체에 Rigidbody 컴포넌트가 존재하면. AddForceAtPosition를 이용 -> 데미지에 비례하여 위치에서 힘을 줌
             Rigidbody rigidbody = raycastHit.transform.GetComponent<Rigidbody>();
-            if(rigidbody)
+            if (rigidbody)
             {
                 rigidbody.AddForceAtPosition(transform.forward * 5f * damage, transform.position);
             }
@@ -182,7 +196,6 @@ public class Weapon : MonoBehaviour
         muzzleFlash.Play();
         // 격발시 텍스트 수정
         bulletsText.text = currentBullets + " / " + bulletsTotal;
-
         // 반동 호출
         Recoil();
         // 탄약 이펙트 함수 호출
@@ -192,33 +205,33 @@ public class Weapon : MonoBehaviour
     // 재장전
     void DoReload()
     {
-            if (!isReloading && currentBullets < bulletsPerMag && bulletsTotal > 0)
-            {
-                anim.CrossFadeInFixedTime("Reload", 0.01f);
-                audioSource.PlayOneShot(reloadSound);
-            }
+        if (!isReloading && currentBullets < bulletsPerMag && bulletsTotal > 0)
+        {
+            anim.CrossFadeInFixedTime("Reload", 0.01f);
+            audioSource.PlayOneShot(reloadSound);
+        }
     }
 
     public void Reload()
     {
         int bulletsToReload = bulletsPerMag - currentBullets;
-            // 만약 탄약 리로드가 전체 탄약 보다 많으면
-            if (bulletsToReload > bulletsTotal)
-            {
-                bulletsToReload = bulletsTotal;
-            }
-            // 현재 탄약에서 재장전한 탄약 더하기
-            currentBullets += bulletsToReload;
-            // 전체 탄약 갯수에서 재장전한 탄약 빼기
-            bulletsTotal -= bulletsToReload;
-            bulletsText.text = currentBullets + " / " + bulletsTotal;
+        // 만약 탄약 리로드가 전체 탄약 보다 많으면
+        if (bulletsToReload > bulletsTotal)
+        {
+            bulletsToReload = bulletsTotal;
+        }
+        // 현재 탄약에서 재장전한 탄약 더하기
+        currentBullets += bulletsToReload;
+        // 전체 탄약 갯수에서 재장전한 탄약 빼기
+        bulletsTotal -= bulletsToReload;
+        bulletsText.text = currentBullets + " / " + bulletsTotal;
     }
 
     // 정조준
     void AimDownSights()
     {
         // 오른쪽 클릭을 입력으로 받으면서 && 장전중이 아니면
-        if(Input.GetButton("Fire2") && !isReloading)
+        if (Input.GetButton("Fire2") && !isReloading)
         {
             transform.localPosition = Vector3.Lerp(transform.localPosition, aimPostion, Time.deltaTime * 8f);
             Camera.main.fieldOfView = Mathf.Lerp(Camera.main.fieldOfView, 40f, Time.deltaTime * 8f);
@@ -239,7 +252,7 @@ public class Weapon : MonoBehaviour
     }
 
     // 반동주는 함수
-     void Recoil()
+    void Recoil()
     {
         //
         Vector3 recoilVector = new Vector3(Random.Range(-recoilKickback.x, recoilKickback.x), recoilKickback.y, recoilKickback.z);
@@ -272,7 +285,7 @@ public class Weapon : MonoBehaviour
         Destroy(casing, 1f);
     }
 
-     void Run()
+    void Run()
     {
         // 왼쪽 쉬프트를 누르면 bool 값 true
         anim.SetBool("isRunning", Input.GetKey(KeyCode.LeftShift));
@@ -280,4 +293,11 @@ public class Weapon : MonoBehaviour
         // Float형 파라미터인 Speed를 해당 캐릭터 컨트롤러의 속도로 지정
         anim.SetFloat("Speed", characterController.velocity.sqrMagnitude);
     }
+
+    //// 총알을 사용한 만큼 BulletsText를 변경, BulletsBar 크기 줄임
+    //void UpdateBulletsBar()
+    //{
+    //    //bulletsText.text = bulletsPerMag + " / " + bulletsTotal;
+    //    bulletsBar.localScale = new Vector3(bulletsPerMag / bulletsTotal, 1, 1);
+    //}
 }

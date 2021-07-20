@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+FPS_Chracter.fbx filter=lfs diff=lfs merge=lfs -text
+Assets/03.[[:space:]]Models/Character/FPS_Character.fbx filter=lfs diff=lfs merge=lfs -text

@@ -7,17 +7,22 @@ public class PlayerManager : MonoBehaviour
 {
     // 플레이어 설정
     [Header("Player Specification")]
-    public float hitPoint = 100f;
-    public float stamina = 500f;
-    private float maxHitPoint;                                  // 체력
-    private float maxStamina;
+    public float hitPoint = 100f;                               // 설정 체력
+    public float stamina = 500f;                                // 설정 스테미나
+    private float maxHitPoint;                                  // 최대 체력
+    private float maxStamina;                                   // 최대 스테미나
+
+    public float damage;
 
     // 레퍼런스
     [Header("References")]
     public Text hpText;                                         // hp text 담는 변수
     public Text stText;                                         // st text 담는 변수
+    public Text gameOverText;                                   // 게임 종료 텍스트 담는 변수
     public RectTransform hpBar;                                 // hpBar 설정 
     public RectTransform stBar;                                 // stBar 설정 
+
+    bool isDamage;                                              // 플레이어가 맞는 딜레이 변수
 
     private CharacterController characterController;
 
@@ -58,11 +63,11 @@ public class PlayerManager : MonoBehaviour
         //}
     }
 
-    public void ApplyDamage(float damage)
+    public void ApplyDamage()
     {
         UpdateHP();
         hitPoint -= damage;
-        if(hitPoint <= 0)
+        if (hitPoint <= 0)
         {
             hitPoint = 0;
 
@@ -78,9 +83,29 @@ public class PlayerManager : MonoBehaviour
         hpBar.localScale = new Vector3(hitPoint / maxHitPoint, 1, 1);
     }
 
-     void UpdateST()
+    void UpdateST()
     {
         stText.text = ((int)(stamina / maxStamina * 100f)).ToString() + "%";
         stBar.localScale = new Vector3(stamina / maxStamina, 1, 1);
+    }
+    void OnTriggerEnter(Collider other)
+    {
+        // 적의 총알을 맞으면
+        if (other.gameObject.tag == "EnemyBullet")
+        {
+            if (!isDamage)
+            {
+                Weapon enemyBullet = other.gameObject.GetComponent<Weapon>();
+                //hitPoint -= enemyBullet.damage;
+
+                // 코루틴 시작
+                //StartCoroutine(OnDamage());
+            }
+        }
+    }
+
+    public void Die()
+    {
+        gameObject.SetActive(false);
     }
 }

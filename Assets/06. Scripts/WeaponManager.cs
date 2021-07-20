@@ -11,11 +11,11 @@ public class WeaponManager : MonoBehaviour
     private int index = 0;                                          // 현재 무기 인덱스
     private bool isSwitching = false;                               // 딜레이 확인용
 
-     void Start()
+    void Start()
     {
         InitializeWeapon();
     }
-     void Update()
+    void Update()
     {
         // 마우스 휠이 내려가고 딜레이가 아니면 인덱스 하나 올림
         if (Input.GetAxis("Mouse ScrollWheel") > 0 && !isSwitching)
@@ -47,7 +47,7 @@ public class WeaponManager : MonoBehaviour
     }
 
     // 게임이 시작될 때 초기화하는 부분. 0번 인덱스의 무기만 Active. 나머지 False
-     void InitializeWeapon()
+    void InitializeWeapon()
     {
         for (int i = 0; i < weapon.Length; i++)
         {
@@ -57,7 +57,7 @@ public class WeaponManager : MonoBehaviour
         index = 0;
     }
 
-     IEnumerator SwitchDelay(int newIndex)
+    IEnumerator SwitchDelay(int newIndex)
     {
         isSwitching = true;
         SwitchWeapons(newIndex);
@@ -66,7 +66,7 @@ public class WeaponManager : MonoBehaviour
     }
 
     // 입력받은 인덱스의 오브젝트를 활성화하고 나머지는 비활성화
-     void SwitchWeapons(int newIndex)
+    void SwitchWeapons(int newIndex)
     {
         for (int i = 0; i < weapon.Length; i++)
         {
